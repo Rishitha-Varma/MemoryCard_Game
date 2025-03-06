@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Game</title>
+  <style>
+        body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-image: url('https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/cad4b52e-f6b1-432f-9035-a5f4853bcf15/d79aauf-6f33c5ca-3e5d-4c7e-ae22-316ec20d7131.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcL2NhZDRiNTJlLWY2YjEtNDMyZi05MDM1LWE1ZjQ4NTNiY2YxNVwvZDc5YWF1Zi02ZjMzYzVjYS0zZTVkLTRjN2UtYWUyMi0zMTZlYzIwZDcxMzEuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.G86ooXOVfDGKgTHYW6J3kM1tS30JDEdkKEspruoI6WE');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-attachment: fixed;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin: 20px 0;
+    }
+
+    #game-board {
+      display: grid;
+      grid-gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+
+    .pokeball {
+      width: 90px;
+      height: 90px;
+      background-color: #fff;
+      background-image: url("ball.png");
+      border: 2px solid #000;
+      background-size: cover;
+      background-position: center;
+      border-radius: 70%;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .pokeball img {
+      width: 90px;
+      height: 90px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+
+    .pokeball.matched img,
+    .pokeball:not(.hidden) img {
+      width: 160px;
+      height: 160px;
+      display: block;
+    }
+
+    .pokeball.hidden {
+      pointer-events: auto;
+    }
+
+    #level-info {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+
+    #congrats-message {
+      display: none;
+      font-size: 24px;
+      color: green;
+      margin-top: 20px;
+    }
+  
+  </style>
+  </head>
+  <body>
+    <h1>Memory Game</h1>
+    <div id="level-info">Level: 1</div>
+    <div id="game-board"></div>
+    <div id="congrats-message">
+      Congratulations! You've completed all levels!
+    </div>
+    </body>
+    <script>
+        let currentLevel = 1;
+let rows = 1;
+let cols = 2;
+const pokemonImages = [
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/39.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/54.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/58.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/151.png'
+];
+
+const gameBoard = document.getElementById('game-board');
+const levelInfo = document.getElementById('level-info');
+const congratsMessage = document.getElementById('congrats-message');
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function createPokeballs(level) {
+  gameBoard.innerHTML = '';
+  levelInfo.textContent = `Level: ${level}`;
+
+  if (level % 2 === 0) {
+    rows += 1;
+  } else {
+    cols += 1;
+  }
+
+  const totalPokeballs = rows * cols;
+  const totalPairs = Math.floor(totalPokeballs / 2);
+  const selectedImages = pokemonImages.slice(0, totalPairs);
+  const pokeballsArray = shuffle([...selectedImages, ...selectedImages].slice(0, totalPokeballs));
+
+  gameBoard.style.gridTemplateColumns = `repeat(${cols}, 90px)`;
+  gameBoard.style.gridTemplateRows = `repeat(${rows}, 90px)`;
+
+  pokeballsArray.forEach((imageUrl) => {
+    const pokeball = document.createElement('div');
+    pokeball.classList.add('pokeball', 'hidden');
+    pokeball.dataset.image = imageUrl;
+
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    pokeball.appendChild(img);
+
+    gameBoard.appendChild(pokeball);
+  });
+
+  addPokeballListeners();
+}
+
+let firstPokeball = null;
+let secondPokeball = null;
+let flag = false;
+
+function flipPokeball(event) {
+  if (flag) return;
+
+  const clickedPokeball = event.target.closest('.pokeball');
+  if (!clickedPokeball || clickedPokeball === firstPokeball) return;
+
+  clickedPokeball.classList.remove('hidden');
+
+  if (!firstPokeball) {
+    firstPokeball = clickedPokeball;
+  } else {
+    secondPokeball = clickedPokeball;
+    checkMatch();
+  }
+}
+
+function checkMatch() {
+  flag = true;
+
+  if (firstPokeball.dataset.image === secondPokeball.dataset.image) {
+    firstPokeball.classList.add('matched');
+    secondPokeball.classList.add('matched');
+    resetTurn();
+    if (document.querySelectorAll('.pokeball.hidden').length === 0) {
+      setTimeout(() => {
+        if (currentLevel <=8) {
+          currentLevel++;
+          createPokeballs(currentLevel);
+        } else {
+          gameBoard.innerHTML = '';
+          levelInfo.textContent = '';
+          congratsMessage.style.display = 'block'; // Display the congrats message here
+        }
+      },100); // Reduced timeout for a smoother transition
+    }
+  } else {
+    setTimeout(() => {
+      firstPokeball.classList.add('hidden');
+      secondPokeball.classList.add('hidden');
+      resetTurn();
+    }, 1000);
+  }
+}
+
+function resetTurn() {
+  [firstPokeball, secondPokeball] = [null, null];
+  flag = false;
+}
+
+function addPokeballListeners() {
+  const pokeballs = document.querySelectorAll('.pokeball');
+  pokeballs.forEach(pokeball => pokeball.addEventListener('click', flipPokeball));
+}
+
+createPokeballs(currentLevel);
+
+    </script>
+    </html>
